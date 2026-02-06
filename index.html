@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Morse Training Online</title>
+<style>
+body {
+    background: #0b0f14;
+    color: #e0e0e0;
+    font-family: monospace;
+    text-align: center;
+    padding: 40px;
+    position: relative;
+}
+#key-container {
+    position: relative;
+    display: inline-block;
+}
+#key {
+    width: 300px;
+    height: 150px;
+    background: #1e293b;
+    border-radius: 15px;
+    line-height: 150px;
+    font-size: 28px;
+    cursor: pointer;
+    user-select: none;
+    z-index: 2;
+    position: relative;
+}
+#key:active {
+    background: #334155;
+}
+#key-container img {
+    position: absolute;
+    left: 400px; /* plus à droite du bouton */
+    top: 50%;
+    transform: translateY(-50%);
+    width: 350px; /* ENORME */
+    height: auto;
+    z-index: 1;
+    background: white; /* fond blanc */
+    padding: 15px;     /* padding autour de l'image */
+    border-radius: 15px; /* coins arrondis */
+    box-shadow: 0 0 15px rgba(0,0,0,0.6);
+}
+button {
+    padding: 10px 25px;
+    font-size: 16px;
+    background: #334155;
+    color: #e0e0e0;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+button:hover {
+    background: #475569;
+}
+#clear-container {
+    margin-top: 15px;
+}
+.output {
+    margin-top: 30px;
+    font-size: 20px;
+}
+label {
+    display: block;
+    margin-top: 20px;
+    font-size: 16px;
+}
+input[type="range"] {
+    width: 300px;
+    margin-top: 10px;
+}
+</style>
+</head>
+<body>
+
+<h1>Morse Training</h1>
+<p>Clique court = point · | Clique long = trait −</p>
+
+<!-- Bouton APPUYER avec image flottante très grande à droite -->
+<div id="key-container">
+    <div id="key">APPUYER</div>
+    <img src="morse.png" alt="Morse">
+</div>
+
+<div id="clear-container">
+    <button id="clear">CLEAR</button>
+</div>
+
+<label for="volume">Volume du bip :</label>
+<input type="range" id="volume" min="0" max="1" step="0.01" value="0.5">
+
+<div class="output">
+    <p>Morse : <span id="morse"></span></p>
+    <p>Texte : <span id="text"></span></p>
+</div>
+
+<script>
+const MORSE = {
+    ".-":"A","-...":"B","-.-.":"C","-..":"D",".":"E",
+    "..-.":"F","--.":"G","....":"H","..":"I",".---":"J",
+    "-.-":"K",".-..":"L","--":"M","-.":"N","---":"O",
+    ".--.":"P","--.-":"Q",".-.":"R","...":"S","-":"T",
+    "..-":"U","...-":"V",".--":"W","-..-":"X","-.--":"Y","--..":"Z",
+    "-----":"0",".----":"1","..---":"2","...--":"3","....-":"4",
+    ".....":"5","-....":"6","--...":"7","---..":"8","----.":"9"
+};
+
+let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let osc, gainNode, startTime;
+let currentMorse = "";
+let morseOutput = document.getElementById("morse");
+let textOutput = document.getElementById("text");
+let letterTimer, wordTimer;
+let volumeControl = document.getElementById("volume");
+
+// Fonction beep avec volume
+function beep(start) {
+    if (start) {
+        osc = audioCtx.createOscillator();
+        osc.frequency.value = 600;
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = volumeControl.value; // volume
+        osc.connect(gainNode).connect(audioCtx.destination);
+        osc.start();
+        startTime = Date.now();
+    } else {
+        osc.stop();
+        let duration = Date.now() - startTime;
+        if (duration < 200) currentMorse += ".";
+        else currentMorse += "-";
+        morseOutput.textContent += currentMorse.slice(-1);
+
+        clearTimeout(letterTimer);
+        clearTimeout(wordTimer);
+
+        letterTimer = setTimeout(endLetter, 600);
+        wordTimer = setTimeout(endWord, 1400);
+    }
+}
+
+function endLetter() {
+    if (MORSE[currentMorse]) {
+        textOutput.textContent += MORSE[currentMorse];
+    }
+    morseOutput.textContent += " ";
+    currentMorse = "";
+}
+
+function endWord() {
+    textOutput.textContent += " ";
+    morseOutput.textContent += " / ";
+}
+
+// CLEAR bouton
+document.getElementById("clear").onclick = () => {
+    currentMorse = "";
+    morseOutput.textContent = "";
+    textOutput.textContent = "";
+};
+
+const key = document.getElementById("key");
+key.addEventListener("mousedown", () => beep(true));
+key.addEventListener("mouseup", () => beep(false));
+key.addEventListener("mouseleave", () => osc && osc.stop());
+</script>
+
+</body>
+</html>
